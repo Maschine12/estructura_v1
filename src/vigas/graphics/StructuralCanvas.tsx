@@ -1,5 +1,4 @@
-// /app/vigas/graphics/StructuralCanvas.tsx
-// Canvas adaptable que se ajusta automáticamente al tamaño de la estructura
+// Canvas adaptable actualizado con grid inteligente y mejor ordenamiento de elementos
 
 import React, { useMemo } from 'react';
 import { GraphicStructureModel } from '../model/graphicModel';
@@ -16,7 +15,7 @@ interface StructuralCanvasProps {
     height?: number;
     showGrid?: boolean;
     className?: string;
-    padding?: number; // padding interno para elementos gráficos
+    paddingPercent?: number;
 }
 
 const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
@@ -25,154 +24,144 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
     height = 400,
     showGrid = true,
     className = '',
-    padding = 50 // espacio extra para cargas, reacciones, etc.
+    paddingPercent = 15
 }) => {
 
-    // Calcular los límites de la estructura y escala adaptativa
-    const { viewBox, adaptiveScale, structureBounds } = useMemo(() => {
-        // Encontrar los límites de todos los elementos
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
+    // Calcular límites y configuración adaptativa
+    const canvasConfig = useMemo(() => {
+        // Encontrar límites de todos los elementos
+        const allPoints = [
+            ...model.members.flatMap(m => [m.startPoint, m.endPoint]),
+            ...model.supports.map(s => s.position),
+            ...model.loads.map(l => l.position),
+            ...model.reactions.map(r => r.position)
+        ];
 
-        // Analizar miembros estructurales
-        model.members.forEach(member => {
-            minX = Math.min(minX, member.startPoint.x, member.endPoint.x);
-            maxX = Math.max(maxX, member.startPoint.x, member.endPoint.x);
-            minY = Math.min(minY, member.startPoint.y, member.endPoint.y);
-            maxY = Math.max(maxY, member.startPoint.y, member.endPoint.y);
-        });
-
-        // Analizar soportes
-        model.supports.forEach(support => {
-            minX = Math.min(minX, support.position.x);
-            maxX = Math.max(maxX, support.position.x);
-            minY = Math.min(minY, support.position.y);
-            maxY = Math.max(maxY, support.position.y);
-        });
-
-        // Analizar cargas
-        model.loads.forEach(load => {
-            minX = Math.min(minX, load.position.x);
-            maxX = Math.max(maxX, load.position.x);
-            minY = Math.min(minY, load.position.y);
-            maxY = Math.max(maxY, load.position.y);
-        });
-
-        // Analizar reacciones
-        model.reactions.forEach(reaction => {
-            minX = Math.min(minX, reaction.position.x);
-            maxX = Math.max(maxX, reaction.position.x);
-            minY = Math.min(minY, reaction.position.y);
-            maxY = Math.max(maxY, reaction.position.y);
-        });
-
-        // Si no hay elementos, usar valores por defecto
-        if (!isFinite(minX)) {
-            minX = 0; maxX = 10;
-            minY = 0; maxY = 5;
+        if (allPoints.length === 0) {
+            return {
+                minX: 0, maxX: 10, minY: 0, maxY: 5,
+                structureWidth: 10, structureHeight: 5,
+                adaptiveScale: 1, viewBox: '0 0 10 5'
+            };
         }
 
-        // Calcular dimensiones de la estructura
-        const structureWidth = maxX - minX;
-        const structureHeight = maxY - minY;
+        const xs = allPoints.map(p => p.x);
+        const ys = allPoints.map(p => p.y);
+
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        const structureWidth = maxX - minX || 1;
+        const structureHeight = maxY - minY || 1;
+
+        // Padding en unidades de estructura
+        const paddingX = Math.max(structureWidth * (paddingPercent / 100), 0.5);
+        const paddingY = Math.max(structureHeight * (paddingPercent / 100), 0.5);
 
         // Calcular escala adaptativa para que quepa en el canvas
-        const availableWidth = width - (padding * 2);
-        const availableHeight = height - (padding * 2);
+        const availableWidth = width - 40; // margen para UI
+        const availableHeight = height - 40;
 
-        const scaleX = availableWidth / structureWidth;
-        const scaleY = availableHeight / structureHeight;
+        const scaleX = availableWidth / (structureWidth + 2 * paddingX);
+        const scaleY = availableHeight / (structureHeight + 2 * paddingY);
 
         // Usar la escala menor para mantener proporciones
-        const adaptiveScale = Math.min(scaleX, scaleY, model.scale);
+        const adaptiveScale = Math.min(scaleX, scaleY);
 
-        // Calcular viewBox centrado
-        const scaledWidth = structureWidth * adaptiveScale;
-        const scaledHeight = structureHeight * adaptiveScale;
-
-        const viewBoxX = (minX * adaptiveScale) - (width - scaledWidth) / 2;
-        const viewBoxY = (minY * adaptiveScale) - (height - scaledHeight) / 2;
+        // ViewBox en coordenadas reales (unidades de estructura)
+        const viewBoxMinX = minX - paddingX;
+        const viewBoxMinY = minY - paddingY;
+        const viewBoxWidth = structureWidth + 2 * paddingX;
+        const viewBoxHeight = structureHeight + 2 * paddingY;
 
         return {
-            viewBox: `${viewBoxX} ${viewBoxY} ${width} ${height}`,
+            minX, maxX, minY, maxY,
+            structureWidth, structureHeight,
             adaptiveScale,
-            structureBounds: { minX, maxX, minY, maxY, structureWidth, structureHeight }
+            viewBox: `${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`,
+            paddingX, paddingY
         };
-    }, [model, width, height, padding]);
+    }, [model, width, height, paddingPercent]);
 
     return (
         <div className={`relative ${className}`}>
-            {/* Información de escala (opcional) */}
-            <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs text-gray-600 z-10">
-                Escala: 1m = {adaptiveScale.toFixed(0)}px
-                {structureBounds.structureWidth > 0 && (
-                    <span className="ml-2">
-                        L: {structureBounds.structureWidth.toFixed(1)}m
-                    </span>
-                )}
+            {/* Información de la estructura */}
+            <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-xs z-10">
+                <div>L: {canvasConfig.structureWidth.toFixed(1)}m</div>
+                <div className="text-gray-300">Escala: 1:{Math.round(1 / canvasConfig.adaptiveScale)}</div>
             </div>
 
             <svg
                 width={width}
                 height={height}
-                viewBox={viewBox}
+                viewBox={canvasConfig.viewBox}
                 className="border border-gray-300 bg-white"
                 preserveAspectRatio="xMidYMid meet"
             >
-                {/* Fondo con grilla opcional */}
+                {/* Grid adaptable */}
                 {showGrid && (
                     <GridBackground
-                        width={width}
-                        height={height}
-                        scale={adaptiveScale}
+                        structureWidth={canvasConfig.structureWidth}
+                        structureHeight={canvasConfig.structureHeight}
+                        minX={canvasConfig.minX}
+                        minY={canvasConfig.minY}
+                        adaptiveScale={canvasConfig.adaptiveScale}
                     />
                 )}
 
-                {/* Dibujar elementos estructurales */}
+                {/* ORDEN IMPORTANTE: elementos de fondo primero */}
+
+                {/* 1. Elementos estructurales (fondo) */}
                 <g id="members">
                     {model.members.map((member) => (
                         <StructuralMember
                             key={member.id}
                             member={member}
-                            scale={adaptiveScale}
+                            scale={1} // Trabajamos en unidades puras
+                            structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
 
-                {/* Dibujar apoyos */}
-                <g id="supports">
-                    {model.supports.map((support) => (
-                        <Support
-                            key={support.id}
-                            support={support}
-                            scale={adaptiveScale}
-                        />
-                    ))}
-                </g>
-
-                {/* Dibujar cargas */}
+                {/* 2. Cargas (antes que soportes para que las flechas no se superpongan) */}
                 <g id="loads">
                     {model.loads.map((load) => (
                         <Load
                             key={load.id}
                             load={load}
-                            scale={adaptiveScale}
+                            scale={1}
+                            structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
 
-                {/* Dibujar reacciones */}
+                {/* 3. Reacciones (antes que soportes) */}
                 <g id="reactions">
                     {model.reactions.map((reaction) => (
                         <Reaction
                             key={reaction.id}
                             reaction={reaction}
-                            scale={adaptiveScale}
+                            scale={1}
+                            structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
 
-                {/* Dibujar etiquetas */}
+                {/* 4. Soportes (encima de cargas/reacciones) */}
+                <g id="supports">
+                    {model.supports.map((support) => (
+                        <Support
+                            key={support.id}
+                            support={support}
+                            scale={1}
+                            structureSize={canvasConfig.structureWidth}
+                        />
+                    ))}
+                </g>
+
+                {/* 5. Etiquetas (siempre al frente) */}
                 <g id="labels">
                     {model.labels?.map((label) => (
                         <Label
@@ -180,31 +169,30 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
                             position={label.position}
                             text={label.text}
                             fontSize={label.fontSize}
-                            scale={adaptiveScale}
+                            scale={1}
+                            structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
 
-                {/* Dibujar diagramas si existen */}
+                {/* 6. Diagramas si existen */}
                 {model.diagrams && (
                     <g id="diagrams">
                         {model.diagrams.map((diagram) => (
                             <g key={diagram.id}>
-                                {/* Línea del diagrama */}
                                 <path
-                                    d={createDiagramPath(diagram.points, adaptiveScale)}
+                                    d={createDiagramPath(diagram.points)}
                                     fill="none"
                                     stroke={diagram.color}
-                                    strokeWidth={2}
-                                    transform={`translate(0, ${(diagram.yOffset || 0)})`}
+                                    strokeWidth={0.02}
+                                    transform={`translate(0, ${diagram.yOffset || 0})`}
                                 />
-                                {/* Puntos del diagrama */}
                                 {diagram.points.map((point, index) => (
                                     <circle
                                         key={index}
-                                        cx={point.x * adaptiveScale}
-                                        cy={point.y * adaptiveScale + (diagram.yOffset || 0)}
-                                        r={2}
+                                        cx={point.x}
+                                        cy={point.y + (diagram.yOffset || 0)}
+                                        r={0.01}
                                         fill={diagram.color}
                                     />
                                 ))}
@@ -218,15 +206,13 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
 };
 
 // Función auxiliar para crear path de diagramas
-function createDiagramPath(points: { x: number; y: number }[], scale: number): string {
+function createDiagramPath(points: { x: number; y: number }[]): string {
     if (points.length === 0) return '';
 
-    let path = `M ${points[0].x * scale} ${points[0].y * scale}`;
-
+    let path = `M ${points[0].x} ${points[0].y}`;
     for (let i = 1; i < points.length; i++) {
-        path += ` L ${points[i].x * scale} ${points[i].y * scale}`;
+        path += ` L ${points[i].x} ${points[i].y}`;
     }
-
     return path;
 }
 

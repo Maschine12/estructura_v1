@@ -1,4 +1,3 @@
-// /src/vigas/components/VisualizadorResultados.tsx
 // Componente para mostrar resultados del análisis estructural
 
 import React, { useState } from 'react';
