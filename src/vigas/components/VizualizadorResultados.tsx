@@ -77,8 +77,6 @@ const VisualizadorResultados: React.FC<VisualizadorResultadosProps> = ({
                         <div className="mb-6">
                             <StructuralCanvas
                                 model={modeloGrafico}
-                                width={800}
-                                height={300}
                                 showGrid={true}
                                 className="mx-auto"
                             />

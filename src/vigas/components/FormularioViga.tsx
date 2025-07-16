@@ -84,7 +84,7 @@ const FormularioViga: React.FC<FormularioVigaProps> = ({
                     min="1"
                     max="20"
                     step="0.5"
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-black w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
 
@@ -103,7 +103,7 @@ const FormularioViga: React.FC<FormularioVigaProps> = ({
                         <div className="space-y-2">
                             {cargas.map((carga) => (
                                 <div key={carga.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
-                                    <span className="text-sm">
+                                    <span className="text-sm text-black">
                                         {carga.magnitud} kN en x = {carga.posicion} m
                                     </span>
                                     <button
@@ -126,7 +126,7 @@ const FormularioViga: React.FC<FormularioVigaProps> = ({
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="block text-xs text-gray-500 mb-1">
+                            <label className="block text-xs text-black mb-1">
                                 Posición (m)
                             </label>
                             <input
@@ -139,12 +139,12 @@ const FormularioViga: React.FC<FormularioVigaProps> = ({
                                 min="0"
                                 max={longitud}
                                 step="0.1"
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="text-black w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs text-gray-500 mb-1">
+                            <label className="block text-xs text-black mb-1">
                                 Magnitud (kN)
                             </label>
                             <input
@@ -156,7 +156,7 @@ const FormularioViga: React.FC<FormularioVigaProps> = ({
                                 })}
                                 min="0.1"
                                 step="0.1"
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="text-black w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
 

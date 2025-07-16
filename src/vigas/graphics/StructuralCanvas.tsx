@@ -1,6 +1,7 @@
-// Canvas adaptable actualizado con grid inteligente y mejor ordenamiento de elementos
+// /app/vigas/graphics/StructuralCanvas.tsx
+// Canvas completamente responsivo que siempre ocupa el 90% del contenedor
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { GraphicStructureModel } from '../model/graphicModel';
 import StructuralMember from './StructuralMember';
 import Support from './Support';
@@ -11,8 +12,6 @@ import GridBackground from './GridBackground';
 
 interface StructuralCanvasProps {
     model: GraphicStructureModel;
-    width?: number;
-    height?: number;
     showGrid?: boolean;
     className?: string;
     paddingPercent?: number;
@@ -20,12 +19,36 @@ interface StructuralCanvasProps {
 
 const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
     model,
-    width = 800,
-    height = 400,
     showGrid = true,
     className = '',
     paddingPercent = 15
 }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerSize, setContainerSize] = useState({ width: 800, height: 400 });
+
+    // Hook para detectar el tamaño del contenedor
+    useEffect(() => {
+        const updateSize = () => {
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                setContainerSize({
+                    width: rect.width * 0.9, // 90% del ancho del contenedor
+                    height: rect.height * 0.9 // 90% del alto del contenedor
+                });
+            }
+        };
+
+        // Actualizar al montar
+        updateSize();
+
+        // Actualizar en resize
+        const resizeObserver = new ResizeObserver(updateSize);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+
+        return () => resizeObserver.disconnect();
+    }, []);
 
     // Calcular límites y configuración adaptativa
     const canvasConfig = useMemo(() => {
@@ -41,7 +64,7 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
             return {
                 minX: 0, maxX: 10, minY: 0, maxY: 5,
                 structureWidth: 10, structureHeight: 5,
-                adaptiveScale: 1, viewBox: '0 0 10 5'
+                viewBox: '0 0 10 5'
             };
         }
 
@@ -60,17 +83,7 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
         const paddingX = Math.max(structureWidth * (paddingPercent / 100), 0.5);
         const paddingY = Math.max(structureHeight * (paddingPercent / 100), 0.5);
 
-        // Calcular escala adaptativa para que quepa en el canvas
-        const availableWidth = width - 40; // margen para UI
-        const availableHeight = height - 40;
-
-        const scaleX = availableWidth / (structureWidth + 2 * paddingX);
-        const scaleY = availableHeight / (structureHeight + 2 * paddingY);
-
-        // Usar la escala menor para mantener proporciones
-        const adaptiveScale = Math.min(scaleX, scaleY);
-
-        // ViewBox en coordenadas reales (unidades de estructura)
+        // ViewBox que incluye toda la estructura + padding
         const viewBoxMinX = minX - paddingX;
         const viewBoxMinY = minY - paddingY;
         const viewBoxWidth = structureWidth + 2 * paddingX;
@@ -79,26 +92,38 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
         return {
             minX, maxX, minY, maxY,
             structureWidth, structureHeight,
-            adaptiveScale,
             viewBox: `${viewBoxMinX} ${viewBoxMinY} ${viewBoxWidth} ${viewBoxHeight}`,
             paddingX, paddingY
         };
-    }, [model, width, height, paddingPercent]);
+    }, [model, paddingPercent]);
 
     return (
-        <div className={`relative ${className}`}>
+        <div
+            ref={containerRef}
+            className={`w-full h-full flex items-center justify-center ${className}`}
+            style={{ minHeight: '400px' }} // altura mínima
+        >
             {/* Información de la estructura */}
-            <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-xs z-10">
-                <div>L: {canvasConfig.structureWidth.toFixed(1)}m</div>
-                <div className="text-gray-300">Escala: 1:{Math.round(1 / canvasConfig.adaptiveScale)}</div>
+            <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-20 shadow-lg">
+                <div className="font-semibold">📏 {canvasConfig.structureWidth.toFixed(1)}m</div>
+                <div className="text-gray-300 text-xs">
+                    {containerSize.width.toFixed(0)} × {containerSize.height.toFixed(0)}px
+                </div>
             </div>
 
+            {/* SVG que siempre ocupa el 90% del contenedor */}
             <svg
-                width={width}
-                height={height}
+                width={containerSize.width}
+                height={containerSize.height}
                 viewBox={canvasConfig.viewBox}
-                className="border border-gray-300 bg-white"
+                className="border-2 border-gray-300 bg-white rounded-lg shadow-lg"
                 preserveAspectRatio="xMidYMid meet"
+                style={{
+                    maxWidth: '90%',
+                    maxHeight: '90%',
+                    minWidth: '300px',
+                    minHeight: '200px'
+                }}
             >
                 {/* Grid adaptable */}
                 {showGrid && (
@@ -107,7 +132,7 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
                         structureHeight={canvasConfig.structureHeight}
                         minX={canvasConfig.minX}
                         minY={canvasConfig.minY}
-                        adaptiveScale={canvasConfig.adaptiveScale}
+                        adaptiveScale={1} // Ya no necesitamos escala, trabaja en unidades puras
                     />
                 )}
 
@@ -119,13 +144,13 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
                         <StructuralMember
                             key={member.id}
                             member={member}
-                            scale={1} // Trabajamos en unidades puras
+                            scale={1}
                             structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
 
-                {/* 2. Cargas (antes que soportes para que las flechas no se superpongan) */}
+                {/* 2. Cargas (antes que soportes) */}
                 <g id="loads">
                     {model.loads.map((load) => (
                         <Load
@@ -168,9 +193,8 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
                             key={label.id}
                             position={label.position}
                             text={label.text}
-                            fontSize={label.fontSize}
+                            fontSize={label.fontSize || Math.max(canvasConfig.structureWidth / 80, 0.08)}
                             scale={1}
-                            structureSize={canvasConfig.structureWidth}
                         />
                     ))}
                 </g>
