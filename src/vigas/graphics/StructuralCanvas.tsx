@@ -104,12 +104,12 @@ const StructuralCanvas: React.FC<StructuralCanvasProps> = ({
             style={{ minHeight: '400px' }} // altura mínima
         >
             {/* Información de la estructura */}
-            <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-20 shadow-lg">
+            {/* <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-20 shadow-lg">
                 <div className="font-semibold">📏 {canvasConfig.structureWidth.toFixed(1)}m</div>
                 <div className="text-gray-300 text-xs">
                     {containerSize.width.toFixed(0)} × {containerSize.height.toFixed(0)}px
                 </div>
-            </div>
+            </div> */}
 
             {/* SVG que siempre ocupa el 90% del contenedor */}
             <svg
