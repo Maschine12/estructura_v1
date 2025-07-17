@@ -90,12 +90,12 @@ const VisualizadorResultados: React.FC<VisualizadorResultadosProps> = ({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {resultado.reacciones.map((reaccion, index) => (
                                     <div key={index} className="flex justify-between">
-                                        <span className="text-gray-600">
+                                        <span className="text-black">
                                             {reaccion.soporteId}:
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="font-medium text-gray-900">
                                             {reaccion.magnitud.toFixed(2)} {reaccion.tipo === 'vertical' ? 'kN' : 'kN·m'}
-                                            <span className="text-sm text-gray-500 ml-1">
+                                            <span className="text-sm text-gray-800 ml-1">
                                                 ({reaccion.direccion})
                                             </span>
                                         </span>
