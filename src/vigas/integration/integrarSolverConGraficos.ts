@@ -1,4 +1,3 @@
-// /src/vigas/integration/integrarSolverConGraficos.ts
 // Integración entre el solver y el motor gráfico - VERSIÓN CORREGIDA
 
 import { BeamModel, ResultadoViga } from '../model/beamModel';
